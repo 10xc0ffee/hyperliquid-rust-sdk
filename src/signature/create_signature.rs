@@ -1,11 +1,11 @@
 use ethers::{
     core::k256::{
-        ecdsa::{recoverable, signature::DigestSigner},
+        ecdsa::{signature::DigestSigner, RecoveryId, Signature as RecoverableSignature},
         elliptic_curve::FieldBytes,
         Secp256k1,
     },
     signers::LocalWallet,
-    types::{transaction::eip712::Eip712, Signature, H256, U256},
+    types::{transaction::eip712::Eip712, Sign, Signature, H256, U256},
 };
 
 use crate::{prelude::*, proxy_digest::Sha256Proxy, signature::agent::l1, Error};
@@ -34,17 +34,7 @@ pub(crate) fn sign_typed_data<T: Eip712>(payload: &T, wallet: &LocalWallet) -> R
 }
 
 fn sign_hash(hash: H256, wallet: &LocalWallet) -> Signature {
-    let recoverable_sig: recoverable::Signature =
-        wallet.signer().sign_digest(Sha256Proxy::from(hash));
-
-    let v = u8::from(recoverable_sig.recovery_id()) as u64 + 27;
-
-    let r_bytes: FieldBytes<Secp256k1> = recoverable_sig.r().into();
-    let s_bytes: FieldBytes<Secp256k1> = recoverable_sig.s().into();
-    let r = U256::from_big_endian(r_bytes.as_slice());
-    let s = U256::from_big_endian(s_bytes.as_slice());
-
-    Signature { r, s, v }
+    wallet.sign_hash(hash).unwrap()
 }
 
 #[cfg(test)]
